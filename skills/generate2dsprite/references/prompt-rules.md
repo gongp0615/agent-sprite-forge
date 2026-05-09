@@ -212,6 +212,42 @@ State the travel behavior clearly:
 - slither
 - mechanical glide
 
+For production `walk` / `run` loops on creatures, monsters, enemies, summons, and other fixed-cell body sprites, prefer an 8-frame `2x4` sheet unless the user explicitly asks for fewer frames. Use read order left-to-right across the top row for frames 1-4, then left-to-right across the bottom row for frames 5-8.
+
+Write the gait phases explicitly:
+
+- frame 1: left leg or left-side limb lifted / stepping forward
+- frame 2: same-side foot or limb moving down, body beginning to lean or settle
+- frame 3: same-side foot or limb planting, body at the lowest or strongest forward phase
+- frame 4: weight passes over that side and the opposite side begins recovery
+- frame 5: exact opposite-side counterpart of frame 1
+- frame 6: exact opposite-side counterpart of frame 2
+- frame 7: exact opposite-side counterpart of frame 3
+- frame 8: exact opposite-side counterpart of frame 4
+
+The pairs `1/5`, `2/6`, `3/7`, and `4/8` must read as mirrored left/right gait counterparts while preserving the same camera, same facing direction, same scale, and same feet or bottom anchor.
+
+For `run`, do not merely reuse walk poses at a faster GIF duration. Say that the run must be visually distinct from walk:
+
+- lower forward torso lean
+- stronger limb drive
+- wider-feeling stride without edge contact
+- more aggressive pursuit energy
+- compact silhouette with fists, claws, tails, antennae, spikes, and weapons kept away from cell edges
+
+For 8-frame walk/run prompts, add a strict containment line:
+
+```text
+The subject should occupy only the central 50% to 60% of each cell, with wide pure #FF00FF padding on all four sides. No foot, hand, claw, antenna, tail, spike, weapon, or clothing may touch or cross a cell edge.
+```
+
+After processing, reject and regenerate if:
+
+- `edge_touch_frames` is not empty
+- any frame pair `1/5`, `2/6`, `3/7`, or `4/8` fails the opposite-side gait relationship
+- `run` looks like the `walk` sheet with only minor pose changes
+- browser preview appears stale; use a cache-busting filename such as `animation-8f.gif` or a query string like `?v=<run-id>`
+
 ## Sheet-Specific Rules
 
 ### Mixed-action atlas guardrail

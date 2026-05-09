@@ -504,6 +504,34 @@ Use $generate2dsprite to create a late-Sengoku player_sheet for a wandering fire
 Use $generate2dsprite to create a wizard spell bundle with cast, projectile, and impact sprites.
 ```
 
+```text
+Use $generate2dsprite to create two original classic isometric dark-fantasy MMORPG monsters.
+Each monster needs idle, walk, and run.
+
+Idle:
+- 4 frames in a 2x2 sheet.
+
+Walk:
+- 8 frames in a 2x4 sheet.
+- Frames 1-4 are one side of the gait.
+- Frames 5-8 are the opposite-side counterparts.
+- Pairs 1/5, 2/6, 3/7, and 4/8 must mirror the left/right leg or side phase while preserving the same facing direction.
+
+Run:
+- 8 frames in a 2x4 sheet.
+- Use the same 1/5, 2/6, 3/7, 4/8 opposite-side gait pairing.
+- Make run visibly different from walk: lower forward lean, stronger limb drive, longer-feeling stride, and more aggressive pursuit energy.
+
+All actions:
+- fixed 3/4 isometric view
+- same identity, scale, and bottom/feet anchor across frames
+- solid flat #FF00FF background
+- subject inside the central 50% to 60% of each cell
+- no foot, claw, antenna, tail, spike, clothing, or weapon may touch cell edges
+- after processing, reject and regenerate if pipeline-meta.json has non-empty edge_touch_frames
+- for web previews, use a cache-busting GIF name or query string for updated 8-frame animations
+```
+
 ### Map
 
 ```text
@@ -543,6 +571,10 @@ For a map output, the result depends on the chosen pipeline:
 - Best results come from prompts that clearly specify view, action, and desired motion style.
 - Large creatures often work better as `3x3 idle`.
 - Small spells and projectiles often work better as `1x4`, `2x2`, or `2x3`.
+- Production monster walk/run loops should usually be `2x4` 8-frame sheets, with frames `1/5`, `2/6`, `3/7`, and `4/8` treated as opposite-side gait counterparts.
+- Do not accept a run cycle that only looks like a slightly changed walk cycle. A run should have a lower forward lean, stronger limb drive, and clearer pursuit energy while still staying inside the fixed cell.
+- Always check `pipeline-meta.json` before delivery. `edge_touch_frames` should be empty for fixed-cell walk/run sheets.
+- When previewing updated GIFs in a browser, use cache-busting filenames such as `animation-8f.gif` or add a version query string.
 - Layout guides are useful for fixed-frame action sheets and prop packs, but they are not always better for compact attack sheets.
 - For commercial projects, prefer original characters or IP that you control.
 

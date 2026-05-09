@@ -52,6 +52,9 @@ Read [references/modes.md](references/modes.md) when the request is ambiguous.
 - For animated body assets, use a multi-row grid by default: 4 frames -> `2x2`, 6 frames -> `2x3`, 8 frames -> `2x4`, 9 frames -> `3x3`, 12 frames -> `3x4` or `4x3`, 16 frames -> `4x4`.
 - If a game engine needs a final single-row strip or mixed atlas, first generate and QC the action as a multi-row grid, then assemble the delivery strip/atlas deterministically.
 - In every animated body grid prompt, require the subject body to stay centered in each cell, full body inside the central 60% to 70% safe area, consistent scale across cells, stable feet/bottom anchor line when applicable, and no limbs, weapons, hair, capes, dust, muzzle flashes, or detached FX crossing cell edges.
+- For production creature or monster `walk` / `run` loops, prefer `2x4` 8-frame sheets over `2x2` 4-frame sheets when the user has not requested a lower frame count. Four-frame locomotion is acceptable for rough drafts, but 8 frames are much easier to make readable and symmetric.
+- For 8-frame non-directional `walk` / `run` sheets, write the gait phases explicitly. Use frames 1-4 for one side of the stride and frames 5-8 as the opposite-side counterparts: `1/5`, `2/6`, `3/7`, and `4/8` must mirror the left/right leg or side phase while preserving the same facing direction.
+- For `run`, explicitly distinguish the action from `walk`: lower forward torso lean, faster stride energy, stronger arm/limb drive, and more aggressive pursuit motion. Keep the subject compact enough that this extra action energy does not cause edge contact or body shrink.
 - For hero attack body prompts, explicitly require body height and body scale to match the accepted idle/run sheets, stable feet/bottom anchor, weapon kept close enough to avoid widening the body bbox, and no detached slash arc or screen-space attack effect.
 - For map prop packs, classify props before choosing a grid. Square `2x2`, `3x3`, and `4x4` packs are only for compact props. Do not put platforms, floors, bridges, walls, ladders, gates, doors, long hazards, wide/tall props, collision-bearing objects, or tileset/strip pieces into square prop packs; use one-by-one, `1x3`/`1x4` strips, custom wide cells, or a tileset-like atlas instead.
 - Keep the solid `#FF00FF` background rule unless the user explicitly wants a different processing workflow.
@@ -132,6 +135,7 @@ Animated body grid guardrail:
 - If final runtime needs a row strip, assemble it after QC from the processed multi-row grid frames.
 - Keep the character centered in every cell. The body centerline should stay near the cell center, feet/bottom anchor should stay on the same y-position when visible, and the subject should occupy only the central safe area with generous magenta padding.
 - For attack, shoot, cast, charge, and other body actions, the body height should stay close to the accepted idle/run body height. If a fixed-cell runtime is being used, reject body-action output when the body appears more than about 10-15% smaller than idle/run, even if `edge_touch_frames` is empty.
+- For fixed-cell 8-frame walk/run sheets, reject outputs when `edge_touch_frames` is not empty, when the pairs `1/5`, `2/6`, `3/7`, `4/8` do not read as opposite-side gait counterparts, or when `run` is visually too similar to `walk`.
 
 Map prop pack guardrail:
 
@@ -242,7 +246,10 @@ For `hero_action_bundle`, expect:
 - `impact` / `explode` -> prefer `2x2`
 - `walk`
   - topdown actor -> `4x4` for four-direction walk
-  - side-view asset -> `2x2`
+  - side-view asset -> `2x2` for rough drafts; prefer `2x4` for production loops
+  - non-directional creature / monster -> prefer `2x4` 8-frame loop with `1/5`, `2/6`, `3/7`, `4/8` opposite-side gait counterparts
+- `run`
+  - non-directional creature / monster -> prefer `2x4` 8-frame loop with a visibly faster, lower, more forceful gait than `walk`
 - controllable hero or main player with multiple actions -> `hero_action_bundle`
   - generate one action per raw multi-row grid sheet, not as a raw `1x4` strip
   - attack/shoot/cast body sheets are body-only by default; wide slash arcs, muzzle flashes, projectiles, trails, dust, and hit impacts are separate FX/projectile/impact sheets
