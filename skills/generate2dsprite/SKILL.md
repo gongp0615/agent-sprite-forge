@@ -49,11 +49,14 @@ Read [references/modes.md](references/modes.md) when the request is ambiguous.
 - Treat script flags as execution primitives chosen by the agent, not user-facing hardcoded workflow.
 - If a generated sheet touches cell edges, drifts in scale, or breaks a projectile / impact loop, either reprocess with better primitive settings or regenerate the raw sheet.
 - Do not use raw single-row sheets such as `1x4`, `1x6`, `1x8`, or `1xN` for characters, players, controllable heroes, creatures, NPCs, enemies, summons, animated props, or any asset where a body/subject must stay centered. Single-row raw generation is too likely to drift horizontally and crop inconsistently.
-- For animated body assets, use a multi-row grid by default: 4 frames -> `2x2`, 6 frames -> `2x3`, 8 frames -> `2x4`, 9 frames -> `3x3`, 12 frames -> `3x4` or `4x3`, 16 frames -> `4x4`.
+- For character, player, controllable hero, creature, NPC, enemy, summon, and other body-action assets, every action defaults to 8 directions unless the user explicitly asks for fewer directions. This includes `idle`, `walk`, `run`, `attack`, `shoot`, `cast`, `jump`, `hurt`, `hover`, `charge`, `death`, and body-only combat actions.
+- Use the 8-direction row order consistently: down, down-left, left, up-left, up, up-right, right, down-right. Columns are the action frames for that direction.
+- Treat `frames=auto` as 8 frames per direction for every 8-direction body action, not the total sheet cell count. A default body-action sheet is `custom_grid` `8x8` with 64 cells.
+- For 8-direction body assets, use `custom_grid` by default: 8 rows x 8 columns. Use `8x1` only for explicitly static directional sprites, and use longer grids such as `8x12` or `8x16` only when the user explicitly requests a longer animation or the engine imposes it.
 - If a game engine needs a final single-row strip or mixed atlas, first generate and QC the action as a multi-row grid, then assemble the delivery strip/atlas deterministically.
 - In every animated body grid prompt, require the subject body to stay centered in each cell, full body inside the central 60% to 70% safe area, consistent scale across cells, stable feet/bottom anchor line when applicable, and no limbs, weapons, hair, capes, dust, muzzle flashes, or detached FX crossing cell edges.
 - For production creature or monster `walk` / `run` loops, prefer `2x4` 8-frame sheets over `2x2` 4-frame sheets when the user has not requested a lower frame count. Four-frame locomotion is acceptable for rough drafts, but 8 frames are much easier to make readable and symmetric.
-- For 8-frame non-directional `walk` / `run` sheets, write the gait phases explicitly. Use frames 1-4 for one side of the stride and frames 5-8 as the opposite-side counterparts: `1/5`, `2/6`, `3/7`, and `4/8` must mirror the left/right leg or side phase while preserving the same facing direction.
+- For 8-frame-per-direction `walk` / `run` sheets, write the gait phases explicitly for every direction. Within each direction row, use frames 1-4 for one side of the stride and frames 5-8 as the opposite-side counterparts: `1/5`, `2/6`, `3/7`, and `4/8` must mirror the left/right leg or side phase while preserving the same facing direction.
 - For `run`, explicitly distinguish the action from `walk`: lower forward torso lean, faster stride energy, stronger arm/limb drive, and more aggressive pursuit motion. Keep the subject compact enough that this extra action energy does not cause edge contact or body shrink.
 - For hero attack body prompts, explicitly require body height and body scale to match the accepted idle/run sheets, stable feet/bottom anchor, weapon kept close enough to avoid widening the body bbox, and no detached slash arc or screen-space attack effect.
 - For map prop packs, classify props before choosing a grid. Square `2x2`, `3x3`, and `4x4` packs are only for compact props. Do not put platforms, floors, bridges, walls, ladders, gates, doors, long hazards, wide/tall props, collision-bearing objects, or tileset/strip pieces into square prop packs; use one-by-one, `1x3`/`1x4` strips, custom wide cells, or a tileset-like atlas instead.
@@ -67,20 +70,20 @@ Pick the smallest useful output.
 
 Examples:
 
-- controllable hero with four directions -> `player` + `player_sheet`
+- controllable hero with directional movement -> `player` + 8-direction `player_sheet`
 - side-view controllable hero with idle/run/shoot/jump -> `player` + `hero_action_bundle`
-  - idle grid sheet, usually `2x2` for 4 frames
-  - run grid sheet, usually `2x2` or `2x3` depending on needed frame count
-  - shoot grid sheet with body/weapon only, usually `2x2`
-  - jump grid sheet, usually `2x2`
+  - idle grid sheet, usually `custom_grid` `8x8` for 8 directions x 8 frames
+  - run grid sheet, usually `custom_grid` `8x8` for 8 directions x 8 frames
+  - shoot grid sheet with body/weapon only, usually `custom_grid` `8x8`
+  - jump grid sheet, usually `custom_grid` `8x8`
   - projectile / muzzle flash as separate assets when needed
   - optional assembled engine atlas after per-action QC
 - side-view controllable hero with melee attack -> `player` + `hero_action_bundle`
-  - attack body grid sheet, usually `2x2` or `2x3`, body-only
+  - attack body grid sheet, usually `custom_grid` `8x8`, body-only
   - slash arc / weapon trail as a separate `fx` sheet when the attack needs a wide visual effect
   - impact spark as a separate `impact` sheet when hits need feedback
 - healer overworld NPC -> `npc` + `single_asset` or `unit_bundle`
-- large boss idle loop -> `creature` + `idle` + `3x3`
+- large boss idle loop -> `creature` + `idle` + `custom_grid` `8x8`
 - wizard throwing a magic orb -> `spell_bundle`
   - caster cast sheet
   - projectile loop
@@ -121,21 +124,20 @@ Mixed-action atlas guardrail:
 - Do not ask `image_gen` to generate unrelated action rows in one raw sheet, such as `row 1 idle, row 2 run, row 3 shoot, row 4 jump`, for a controllable hero or main character.
 - Do not ask `image_gen` to generate raw single-row action strips such as `1x4 idle`, `1x4 run`, `1x4 shoot`, or `1x4 jump` for a controllable hero, character, creature, NPC, enemy, summon, or animated prop.
 - If an engine needs a combined `4x4`, `5x5`, custom atlas, or row-strip delivery format, generate the action grids separately, process and QC them separately, then assemble the delivery atlas deterministically.
-- Exceptions are canonical directional locomotion sheets, one continuous long action sequence, prop packs, tileset-like atlases, and low-stakes compact enemy combat sheets. These still need one coherent prompt and visual QC.
+- Exceptions are canonical 8-direction single-action sheets, one continuous long action sequence, prop packs, tileset-like atlases, and low-stakes compact enemy combat sheets. These still need one coherent prompt and visual QC.
 - Keep projectile, muzzle flash, impact, dust trails, and detached FX in separate sheets unless they are intentionally part of the same action silhouette and remain tightly attached.
 - For controllable heroes and main characters, "tightly attached" is not enough when the effect makes the action bbox much wider or taller than idle/run. Split wide slash arcs, muzzle flashes, long weapon trails, dust clouds, and impact bursts into separate FX sheets by default.
 
 Animated body grid guardrail:
 
 - `1x4` and other raw single-row sheets are not valid defaults for animated bodies. This includes players, controllable heroes, creatures, NPCs, enemies, summons, animated props, and body-attached combat actions.
-- Use `2x2` for 4-frame body actions. This is the default for idle, short attack, shoot body, jump, hurt, hover, and compact side-view walk/run actions.
-- Use `2x3` for 6-frame body actions such as cast, attack, summon, run, charge, or transformation.
-- Use `2x4`, `3x3`, `3x4`, or `4x4` for longer body actions. Prefer a compact grid over a long row.
-- For 4-direction top-down walk, `4x4` can remain a raw generation shape because it is a canonical directional locomotion sheet, not four unrelated action rows.
+- Use `custom_grid` `8x8` for all default 8-direction body actions, including idle, walk, run, attack, shoot body, cast, jump, hurt, hover, charge, summon, transformation, and death.
+- Use `custom_grid` `8x12` or `8x16` only when the user explicitly asks for a longer action, not as an automatic default.
+- For 8-direction top-down body actions, the 8-row custom grid can remain a raw generation shape because every row is the same action in a different direction, not unrelated action rows.
 - If final runtime needs a row strip, assemble it after QC from the processed multi-row grid frames.
 - Keep the character centered in every cell. The body centerline should stay near the cell center, feet/bottom anchor should stay on the same y-position when visible, and the subject should occupy only the central safe area with generous magenta padding.
 - For attack, shoot, cast, charge, and other body actions, the body height should stay close to the accepted idle/run body height. If a fixed-cell runtime is being used, reject body-action output when the body appears more than about 10-15% smaller than idle/run, even if `edge_touch_frames` is empty.
-- For fixed-cell 8-frame walk/run sheets, reject outputs when `edge_touch_frames` is not empty, when the pairs `1/5`, `2/6`, `3/7`, `4/8` do not read as opposite-side gait counterparts, or when `run` is visually too similar to `walk`.
+- For fixed-cell 8-direction, 8-frame-per-direction walk/run sheets, reject outputs when `edge_touch_frames` is not empty, when any direction row breaks the `1/5`, `2/6`, `3/7`, `4/8` opposite-side gait relationship, when direction identities are inconsistent, or when `run` is visually too similar to `walk`.
 
 Map prop pack guardrail:
 
@@ -163,7 +165,7 @@ Use layout guides deliberately:
 
 - recommended for `prop_pack_3x3`, `prop_pack_4x4`, tileset-like atlases, fixed multi-row animation grids, and non-directional 16-frame action sequences such as casting, summoning, charging, death, or transformation
 - optional for `3x3` large idle and high-value showcase loops when previous generations drift in scale or spacing
-- not the default for `4x4` four-direction walk sheets, because the guide can make directional poses too conservative; use it only after an unguided run fails layout or edge safety
+- not the default for 8-direction body sheets, because the guide can make directional poses too conservative; use it only after an unguided run fails layout or edge safety
 
 ### 3. Generate the raw image
 
@@ -222,10 +224,10 @@ For a single sheet, expect:
 
 For `player_sheet`, expect:
 
-- transparent 4x4 sheet
-- 16 frame PNGs
-- direction strips
-- 4 direction GIFs
+- transparent 8-direction custom grid sheet
+- one frame PNG per cell
+- 8 direction strips
+- 8 direction GIFs
 
 For `spell_bundle` or `unit_bundle`, create one folder per asset in the bundle.
 
@@ -238,23 +240,27 @@ For `hero_action_bundle`, expect:
 
 ## Defaults
 
+- Frame count defaults when `frames=auto`:
+  - `single` -> 1 frame
+  - body actions default to 8 directions; multiply the per-direction frame count by 8 to get total cells
+  - every body action -> 8 frames per direction (`8x8`, 64 cells)
+  - one coherent long non-directional action sequence -> 16 frames (`4x4`) only when richer timing is useful
+  - projectile short loop -> 4 frames (`2x2` by default; use a strip only when the engine requires it)
 - `idle`
-  - small or medium actor -> `2x2`
-  - large creature or boss -> `3x3`
-- `cast` -> prefer `2x3`
+  - any body actor, including large creature or boss -> `custom_grid` `8x8`
+- `cast` -> prefer `custom_grid` `8x8` for caster body actions
 - `projectile` -> prefer `2x2` for short animated loops; use row strips only when the engine specifically requires a strip, and assemble that strip after QC when practical
 - `impact` / `explode` -> prefer `2x2`
 - `walk`
-  - topdown actor -> `4x4` for four-direction walk
-  - side-view asset -> `2x2` for rough drafts; prefer `2x4` for production loops
-  - non-directional creature / monster -> prefer `2x4` 8-frame loop with `1/5`, `2/6`, `3/7`, `4/8` opposite-side gait counterparts
+  - actor body assets -> `custom_grid` `8x8` for 8 directions x 8 frames
+  - non-directional creature / monster only when explicitly requested -> prefer `2x4` 8-frame loop with `1/5`, `2/6`, `3/7`, `4/8` opposite-side gait counterparts
 - `run`
-  - non-directional creature / monster -> prefer `2x4` 8-frame loop with a visibly faster, lower, more forceful gait than `walk`
+  - actor body assets -> `custom_grid` `8x8` for 8 directions x 8 frames, visibly faster, lower, and more forceful than `walk`
 - controllable hero or main player with multiple actions -> `hero_action_bundle`
   - generate one action per raw multi-row grid sheet, not as a raw `1x4` strip
   - attack/shoot/cast body sheets are body-only by default; wide slash arcs, muzzle flashes, projectiles, trails, dust, and hit impacts are separate FX/projectile/impact sheets
-  - default 4-frame action grid is `2x2`
-  - use `2x3` for 6-frame actions and `2x4`, `3x3`, `3x4`, or `4x4` for longer actions
+  - default body-action grid is `custom_grid` `8x8`
+  - use `custom_grid` `8x12` or `8x16` only when explicitly requested
   - do not generate a mixed-action raw `4x4`, `5x5`, or custom atlas
   - assemble the final atlas only as a deterministic delivery step if the game requires it
 - `4x4`, `5x5`, and custom grids

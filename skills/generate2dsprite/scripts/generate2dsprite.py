@@ -154,6 +154,8 @@ FRAME_LABELS = {
     ],
 }
 
+EIGHT_DIRECTIONS = ["down", "down-left", "left", "up-left", "up", "up-right", "right", "down-right"]
+
 PROCESS_TARGETS = sorted(TARGET_MODES)
 
 ARCHETYPES = {
@@ -796,7 +798,13 @@ def cmd_process(args: argparse.Namespace) -> None:
             min_component_area=args.min_component_area,
             edge_touch_margin=args.edge_touch_margin,
         )
-        if has_custom_grid:
+        if has_custom_grid and rows == len(EIGHT_DIRECTIONS):
+            labels = [
+                f"{direction}-{col + 1}"
+                for direction in EIGHT_DIRECTIONS
+                for col in range(cols)
+            ]
+        elif has_custom_grid:
             prefix = args.label_prefix or args.mode
             labels = [f"{prefix}-{index + 1}" for index in range(rows * cols)]
         else:
@@ -806,7 +814,13 @@ def cmd_process(args: argparse.Namespace) -> None:
 
         compose_sheet(frames, rows, cols, cell_size).save(out_dir / "sheet-transparent.png")
 
-        if args.mode == "player_sheet" and not has_custom_grid and (rows, cols) == (4, 4):
+        if has_custom_grid and rows == len(EIGHT_DIRECTIONS):
+            for row_index, direction in enumerate(EIGHT_DIRECTIONS):
+                row_frames = frames[row_index * cols : (row_index + 1) * cols]
+                compose_sheet(row_frames, 1, cols, cell_size).save(out_dir / f"{direction}-strip.png")
+                save_transparent_gif(row_frames, out_dir / f"{direction}.gif", args.duration)
+            metadata["directions"] = EIGHT_DIRECTIONS
+        elif args.mode == "player_sheet" and not has_custom_grid and (rows, cols) == (4, 4):
             directions = ["down", "left", "right", "up"]
             for row_index, direction in enumerate(directions):
                 row_frames = frames[row_index * cols : (row_index + 1) * cols]

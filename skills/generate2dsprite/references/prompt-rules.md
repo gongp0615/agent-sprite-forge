@@ -50,7 +50,7 @@ Use a layout guide when the sheet needs stronger geometric control than text alo
 
 - good fit: `3x3` and `4x4` prop packs, tileset-like atlases, fixed atlas rows, and non-directional 16-frame sequences such as casting, summoning, charging, death, or transformation
 - possible fit: `3x3` large idles or showcase loops when earlier generations drift in scale, spacing, or edge safety
-- risky fit: four-direction walk sheets, because guide pressure can make directional poses too centered and reduce locomotion clarity
+- risky fit: 8-direction body sheets, because guide pressure can make directional poses too centered and reduce locomotion clarity
 
 When using a layout guide, make the guide image visible first and write:
 
@@ -115,6 +115,20 @@ For `creature`, `spell`, `projectile`, `impact`, `summon`, and `fx`:
 
 ## Action Rules
 
+When the user does not request a specific frame count, use these defaults:
+
+- `single`: 1 frame
+- body actions default to 8 directions; rows are directions, columns are action frames for that direction
+- every body action: 8 frames per direction (`8x8`, 64 cells), including `idle`, `walk`, `run`, `attack`, `shoot`, `cast`, `jump`, `hurt`, `hover`, `charge`, `summon`, `death`, transformation, large creatures, and bosses
+- non-directional `impact`, `explode`, and short projectile loops: 4 frames
+- one coherent long non-directional action: 16 frames
+
+For every 8-direction body-action prompt, state the row order exactly:
+
+```text
+8-direction custom grid. Rows, from top to bottom: down, down-left, left, up-left, up, up-right, right, down-right. Columns are the animation frames for that direction. Do not mix different actions between rows.
+```
+
 ### `idle`
 
 Use:
@@ -126,12 +140,11 @@ Use:
 
 Prefer:
 
-- `2x2` for standard actors
-- `3x3` for large creatures and showcase idles
+- `8x8` custom grid for all body actors, including large creatures and bosses
 
 ### `cast`
 
-A `2x3` cast is often the best default:
+An `8x8` cast is the default for body actions:
 
 - readiness
 - energy gather
@@ -212,9 +225,9 @@ State the travel behavior clearly:
 - slither
 - mechanical glide
 
-For production `walk` / `run` loops on creatures, monsters, enemies, summons, and other fixed-cell body sprites, prefer an 8-frame `2x4` sheet unless the user explicitly asks for fewer frames. Use read order left-to-right across the top row for frames 1-4, then left-to-right across the bottom row for frames 5-8.
+For production `walk` / `run` loops on characters, players, creatures, monsters, enemies, summons, and other fixed-cell body sprites, prefer an 8-direction `8x8` custom grid unless the user explicitly asks for fewer directions or fewer frames. Each row is one direction; read frames left-to-right within that row.
 
-Write the gait phases explicitly:
+Write the gait phases explicitly for each direction row:
 
 - frame 1: left leg or left-side limb lifted / stepping forward
 - frame 2: same-side foot or limb moving down, body beginning to lean or settle
@@ -225,7 +238,7 @@ Write the gait phases explicitly:
 - frame 7: exact opposite-side counterpart of frame 3
 - frame 8: exact opposite-side counterpart of frame 4
 
-The pairs `1/5`, `2/6`, `3/7`, and `4/8` must read as mirrored left/right gait counterparts while preserving the same camera, same facing direction, same scale, and same feet or bottom anchor.
+Within each direction row, the pairs `1/5`, `2/6`, `3/7`, and `4/8` must read as mirrored left/right gait counterparts while preserving the same camera, same facing direction, same scale, and same feet or bottom anchor.
 
 For `run`, do not merely reuse walk poses at a faster GIF duration. Say that the run must be visually distinct from walk:
 
@@ -235,7 +248,7 @@ For `run`, do not merely reuse walk poses at a faster GIF duration. Say that the
 - more aggressive pursuit energy
 - compact silhouette with fists, claws, tails, antennae, spikes, and weapons kept away from cell edges
 
-For 8-frame walk/run prompts, add a strict containment line:
+For 8-direction 8-frame walk/run prompts, add a strict containment line:
 
 ```text
 The subject should occupy only the central 50% to 60% of each cell, with wide pure #FF00FF padding on all four sides. No foot, hand, claw, antenna, tail, spike, weapon, or clothing may touch or cross a cell edge.
@@ -244,7 +257,8 @@ The subject should occupy only the central 50% to 60% of each cell, with wide pu
 After processing, reject and regenerate if:
 
 - `edge_touch_frames` is not empty
-- any frame pair `1/5`, `2/6`, `3/7`, or `4/8` fails the opposite-side gait relationship
+- any direction row has a frame pair `1/5`, `2/6`, `3/7`, or `4/8` that fails the opposite-side gait relationship
+- direction rows do not preserve the required 8-direction order
 - `run` looks like the `walk` sheet with only minor pose changes
 - browser preview appears stale; use a cache-busting filename such as `animation-8f.gif` or a query string like `?v=<run-id>`
 
@@ -270,12 +284,35 @@ For controllable heroes, main characters, and high-value player assets:
 
 Allowed raw multi-row sheets:
 
-- canonical four-direction locomotion sheets where every row is the same walk/run action in a different direction
+- canonical 8-direction sheets where every row is the same action in a different direction
 - one continuous non-directional long action sequence, read left-to-right across rows
 - prop packs or tileset-like atlases where each cell is intentionally a separate object
 - compact low-stakes enemy combat sheets, but not controllable hero production assets
 
-### `4x4` player sheet
+### 8-direction body action sheet
+
+Use for all default character, player, controllable hero, creature, NPC, enemy, summon, and body-action sheets:
+
+- row 1: down
+- row 2: down-left
+- row 3: left
+- row 4: up-left
+- row 5: up
+- row 6: up-right
+- row 7: right
+- row 8: down-right
+- columns: action frames for that row's direction
+- generate one action per sheet; do not mix idle, walk, run, attack, hurt, and death in different rows
+- preserve identity, scale, anchor, costume, palette, and weapon size across all directions
+- keep diagonal directions visually distinct from cardinal directions
+
+Use common shapes:
+
+- `8x1`: static directional sprite
+- `8x8`: all default body actions, including idle, walk, run, attack, shoot body, cast, jump, hurt, hover, summon, charge, death, transformation, large creatures, and bosses
+- `8x12` or `8x16`: only when the user explicitly requests a longer animation
+
+### Legacy `4x4` player sheet
 
 Use:
 
@@ -288,7 +325,7 @@ Use:
 - column 3: neutral again
 - column 4: right foot forward
 
-Do not use a layout guide by default for this sheet. Try an unguided prompt first unless the previous result crossed cell edges or failed the grid shape.
+Use this only when the user explicitly asks for legacy four-direction output. Otherwise use an 8-direction body action sheet.
 
 ### `3x3` large idle
 
